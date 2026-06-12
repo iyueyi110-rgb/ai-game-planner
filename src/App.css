@@ -501,6 +501,53 @@
   margin: 0;
 }
 
+/* ── Custom description inputs ── */
+.custom-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-h);
+  resize: vertical;
+  min-height: 44px;
+  box-sizing: border-box;
+  transition: all 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+  outline: none;
+}
+
+.custom-input::placeholder {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.custom-input:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.custom-input:focus {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.custom-input-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-left: 2px;
+  user-select: none;
+}
+
 /* ═══════════════════════════════════════════════════════════
    GENERATING PAGE
    ═══════════════════════════════════════════════════════════ */

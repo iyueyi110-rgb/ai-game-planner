@@ -276,7 +276,7 @@ const REWARDS: Record<string, string[]> = {
   ],
 }
 
-function generatePlan(s: Selections): GamePlan {
+function generatePlan(s: Selections, custom?: Record<string, string>): GamePlan {
   const g = s.gameType
   const f = s.gameplayFocus
   const a = s.artStyle
@@ -305,13 +305,31 @@ function generatePlan(s: Selections): GamePlan {
     : a === 'ink' ? `\n\n🎨 水墨国风下，极品装备如同画卷中的珍宝——墨色氤氲中浮现金色铭文，朱砂点缀处是装备的核心所在。`
     : `\n\n🎨 像素风格让每一件稀有物品都如同从经典 RPG 中走出——精致的像素图标配上 CRT 扫描线拾取动画，怀旧与精致完美融合。`
 
+  // Build custom descriptions addendum
+  const customGameType = custom?.gameType?.trim()
+  const customGameplay = custom?.gameplayFocus?.trim()
+  const customArt = custom?.artStyle?.trim()
+  const customGoal = custom?.playerGoal?.trim()
+
+  const worldCustom = customGameType || customArt
+    ? `\n\n✏️ **你的自定义设定**：${[customGameType, customArt].filter(Boolean).join('；')}`
+    : ''
+
+  const gameplayCustom = customGameplay
+    ? `\n\n✏️ **你的自定义玩法**：${customGameplay}`
+    : ''
+
+  const rewardCustom = customGoal
+    ? `\n\n✏️ **你的自定义目标**：${customGoal}`
+    : ''
+
   return {
-    worldbuilding: `## 🌍 世界观\n\n${worldDesc}${artFlavor}`,
+    worldbuilding: `## 🌍 世界观\n\n${worldDesc}${artFlavor}${worldCustom}`,
     protagonist: `## 👤 主角设定\n\n${protag}`,
-    coreGameplay: `## 🎮 核心玩法\n\n${coreSource}`,
+    coreGameplay: `## 🎮 核心玩法\n\n${coreSource}${gameplayCustom}`,
     questFlow: `## 📜 任务流程\n\n${questFlow}`,
     playerBranches: `## 🌿 玩家分支\n\n${branch}`,
-    rewardSystem: `## 🏆 奖励系统\n\n${reward}${rewardArt}`,
+    rewardSystem: `## 🏆 奖励系统\n\n${reward}${rewardArt}${rewardCustom}`,
   }
 }
 
@@ -553,15 +571,26 @@ function HomePage({ onStart }: { onStart: () => void }) {
 function SelectPage({
   selections,
   setSelections,
+  customInputs,
+  setCustomInputs,
   onGenerate,
   onBack,
 }: {
   selections: Selections
   setSelections: (s: Selections) => void
+  customInputs: Record<string, string>
+  setCustomInputs: (c: Record<string, string>) => void
   onGenerate: () => void
   onBack: () => void
 }) {
   const allSelected = Object.values(selections).every(Boolean)
+
+  const placeholderMap: Record<string, string> = {
+    gameType: '例如：我希望这个世界有漂浮的魔法学院，龙族与人类共存…',
+    gameplayFocus: '例如：加入潜行暗杀玩法，或者增加宠物养成系统…',
+    artStyle: '例如：希望角色设计偏写实风格，色彩以莫兰迪色系为主…',
+    playerGoal: '例如：加入家园建设系统，玩家可以建造和经营自己的领地…',
+  }
 
   return (
     <div className="page select-page">
@@ -604,6 +633,21 @@ function SelectPage({
                   )}
                 </button>
               ))}
+            </div>
+            <div className="custom-input-wrapper">
+              <textarea
+                className="custom-input"
+                placeholder={placeholderMap[key] ?? '补充你的自定义描述…'}
+                value={customInputs[key] ?? ''}
+                onChange={(e) =>
+                  setCustomInputs({ ...customInputs, [key]: e.target.value })
+                }
+                rows={2}
+                maxLength={300}
+              />
+              <span className="custom-input-hint">
+                💡 可选：补充自定义描述（{(customInputs[key] ?? '').length}/300）
+              </span>
             </div>
           </div>
         ))}
@@ -911,6 +955,14 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [backPage, setBackPage] = useState<'select' | 'favorites'>('select')
 
+  // Custom text inputs for each dimension
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({
+    gameType: '',
+    gameplayFocus: '',
+    artStyle: '',
+    playerGoal: '',
+  })
+
   // ── Load user from localStorage on mount ──
   useEffect(() => {
     try {
@@ -956,12 +1008,12 @@ export default function App() {
   }, [])
 
   const handleComplete = useCallback(() => {
-    const newPlan = generatePlan(selections)
+    const newPlan = generatePlan(selections, customInputs)
     setPlan(newPlan)
     setViewingFavorite(null)
     setBackPage('select')
     setPage('result')
-  }, [selections])
+  }, [selections, customInputs])
 
   const handleRegenerate = useCallback(() => {
     setPage('generating')
@@ -969,6 +1021,7 @@ export default function App() {
 
   const handleResetSelections = useCallback(() => {
     setSelections({ gameType: '', gameplayFocus: '', artStyle: '', playerGoal: '' })
+    setCustomInputs({ gameType: '', gameplayFocus: '', artStyle: '', playerGoal: '' })
     setViewingFavorite(null)
     setBackPage('select')
     setPage('select')
@@ -1087,6 +1140,8 @@ export default function App() {
         <SelectPage
           selections={selections}
           setSelections={setSelections}
+          customInputs={customInputs}
+          setCustomInputs={setCustomInputs}
           onGenerate={handleGenerate}
           onBack={() => setPage('home')}
         />
