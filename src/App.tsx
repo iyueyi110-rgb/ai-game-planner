@@ -471,6 +471,8 @@ function GeneratingPage({ onComplete }: { onComplete: () => void }) {
       <div className="generating-content">
         <div className="generating-spinner">
           <div className="spinner-ring" />
+          <div className="spinner-ring" />
+          <div className="spinner-ring" />
           <div className="spinner-core">AI</div>
         </div>
         <h2 className="generating-title">AI 正在生成策划方案…</h2>
@@ -625,6 +627,11 @@ export default function App() {
 
   return (
     <div className="app">
+      <div className="bg-layer">
+        <div className="bg-orb bg-orb-1" />
+        <div className="bg-orb bg-orb-2" />
+        <div className="bg-orb bg-orb-3" />
+      </div>
       {page === 'home' && <HomePage onStart={() => setPage('select')} />}
       {page === 'select' && (
         <SelectPage
