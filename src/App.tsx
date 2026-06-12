@@ -567,6 +567,32 @@ function ResultPage({
   )
 }
 
+// ── Footer ──
+function Footer() {
+  return (
+    <footer className="app-footer">
+      <div className="footer-divider" />
+      <div className="footer-content">
+        <div className="footer-brand">
+          <span className="footer-logo">AI 叙事游戏策划助手</span>
+          <span className="footer-badge">作品集项目</span>
+        </div>
+        <p className="footer-desc">
+          面向游戏策划流程的 AI 辅助创意工具 —— 通过选择游戏类型、玩法重点、美术风格与玩家目标，
+          模拟 AI 在游戏前期创意设计中的应用，自动生成包含世界观、主角设定、核心玩法、任务流程、
+          玩家分支与奖励系统的完整策划方案。
+        </p>
+        <div className="footer-meta">
+          <span>Built with React + TypeScript + Vite</span>
+          <span className="footer-dot">·</span>
+          <span>AI Product Design Portfolio</span>
+        </div>
+        <p className="footer-copy">© 2026 · Designed & Developed for Portfolio</p>
+      </div>
+    </footer>
+  )
+}
+
 // ── Main App ──
 export default function App() {
   const [page, setPage] = useState<Page>('home')
@@ -617,6 +643,7 @@ export default function App() {
           onBack={handleResetSelections}
         />
       )}
+      <Footer />
     </div>
   )
 }
