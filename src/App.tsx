@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import './App.css'
 
 // ── Types ──────────────────────────────────────────────
-type Page = 'home' | 'select' | 'generating' | 'result'
+type Page = 'home' | 'select' | 'generating' | 'result' | 'favorites'
 
 interface Selections {
   gameType: string
@@ -18,6 +18,19 @@ interface GamePlan {
   questFlow: string
   playerBranches: string
   rewardSystem: string
+}
+
+interface User {
+  nickname: string
+  email: string
+}
+
+interface Favorite {
+  id: string
+  title: string
+  plan: GamePlan
+  selections: Selections
+  timestamp: number
 }
 
 // ── Option definitions ─────────────────────────────────
@@ -302,6 +315,29 @@ function generatePlan(s: Selections): GamePlan {
   }
 }
 
+// ── Utility functions ──────────────────────────────────
+
+function formatTime(ts: number): string {
+  const d = new Date(ts)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function getSnippet(text: string, maxLen = 120): string {
+  const plain = text
+    .replace(/^## .+$/gm, '')
+    .replace(/🎨 .+$/gm, '')
+    .replace(/\*\*/g, '')
+    .replace(/\n+/g, ' ')
+    .trim()
+  if (plain.length <= maxLen) return plain
+  return plain.slice(0, maxLen).trimEnd() + '…'
+}
+
+function generateFavoriteId(): string {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+}
+
 // ── Cute loading messages ──
 const LOADING_MESSAGES = [
   '正在构思世界观维度…',
@@ -332,6 +368,148 @@ function FloatingParticles() {
           {['✦', '◈', '◆', '◇', '▣', '◉'][i % 6]}
         </span>
       ))}
+    </div>
+  )
+}
+
+// ── Toast ──────────────────────────────────────────────
+function Toast({ message }: { message: string }) {
+  return <div className="toast" key={message}>{message}</div>
+}
+
+// ── Navbar ─────────────────────────────────────────────
+function Navbar({
+  user,
+  currentPage,
+  onNavigate,
+  onLoginClick,
+  onLogout,
+}: {
+  user: User | null
+  currentPage: Page
+  onNavigate: (page: Page) => void
+  onLoginClick: () => void
+  onLogout: () => void
+}) {
+  return (
+    <nav className="navbar">
+      <div className="nav-inner">
+        <button className="nav-brand" onClick={() => onNavigate('home')}>
+          <span className="nav-brand-icon">✦</span>
+          <span className="nav-brand-text">AI 叙事游戏策划助手</span>
+        </button>
+        <div className="nav-right">
+          <button
+            className={`nav-link ${currentPage === 'favorites' ? 'active' : ''}`}
+            onClick={() => onNavigate('favorites')}
+          >
+            <span className="nav-link-icon">⭐</span>
+            <span className="nav-link-text">我的收藏</span>
+          </button>
+          {user ? (
+            <div className="nav-user-area">
+              <span className="nav-user-name" title={user.email}>{user.nickname}</span>
+              <button className="nav-logout" onClick={onLogout}>退出</button>
+            </div>
+          ) : (
+            <button className="nav-login-btn" onClick={onLoginClick}>
+              登录
+            </button>
+          )}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+// ── Login Modal ────────────────────────────────────────
+function LoginModal({
+  onLogin,
+  onClose,
+}: {
+  onLogin: (nickname: string, email: string) => void
+  onClose: () => void
+}) {
+  const [nickname, setNickname] = useState('')
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmedNick = nickname.trim()
+    const trimmedEmail = email.trim()
+
+    if (!trimmedNick) {
+      setError('请输入昵称')
+      return
+    }
+    if (trimmedNick.length > 20) {
+      setError('昵称不能超过 20 个字符')
+      return
+    }
+    if (!trimmedEmail) {
+      setError('请输入邮箱')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('请输入有效的邮箱地址')
+      return
+    }
+
+    setError('')
+    onLogin(trimmedNick, trimmedEmail)
+  }
+
+  return (
+    <div className="login-overlay" onClick={onClose}>
+      <div className="login-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="login-close" onClick={onClose} aria-label="关闭">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+        <div className="login-header">
+          <span className="login-icon">👤</span>
+          <h2>登录</h2>
+          <p>输入昵称和邮箱即可登录，无需注册</p>
+        </div>
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-field">
+            <label htmlFor="login-nickname">昵称</label>
+            <input
+              id="login-nickname"
+              className="login-input"
+              type="text"
+              placeholder="你的昵称"
+              value={nickname}
+              onChange={(e) => { setNickname(e.target.value); setError('') }}
+              autoFocus
+              maxLength={20}
+            />
+          </div>
+          <div className="login-field">
+            <label htmlFor="login-email">邮箱</label>
+            <input
+              id="login-email"
+              className="login-input"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError('') }}
+            />
+          </div>
+          {error && <p className="login-error">{error}</p>}
+          <div className="login-actions">
+            <button type="submit" className="btn-primary login-submit">
+              登录
+            </button>
+            <button type="button" className="login-cancel" onClick={onClose}>
+              取消
+            </button>
+          </div>
+        </form>
+        <p className="login-hint">登录信息仅保存在本地浏览器中</p>
+      </div>
     </div>
   )
 }
@@ -501,11 +679,19 @@ function ResultPage({
   selections,
   onRegenerate,
   onBack,
+  isFavorited,
+  onToggleFavorite,
+  sourcePage,
+  onDeleteFavorite,
 }: {
   plan: GamePlan
   selections: Selections
   onRegenerate: () => void
   onBack: () => void
+  isFavorited: boolean
+  onToggleFavorite: () => void
+  sourcePage: 'select' | 'favorites'
+  onDeleteFavorite?: () => void
 }) {
   const [visibleSections, setVisibleSections] = useState(0)
   const sections = Object.entries(plan)
@@ -529,11 +715,28 @@ function ResultPage({
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          重新选择
+          {sourcePage === 'favorites' ? '返回收藏' : '重新选择'}
         </button>
-        <button className="btn-primary btn-regenerate" onClick={onRegenerate}>
-          <span>🔄 重新生成</span>
-        </button>
+
+        <div className="result-actions-right">
+          {sourcePage === 'select' ? (
+            <>
+              <button
+                className={`btn-favorite ${isFavorited ? 'favorited' : ''}`}
+                onClick={onToggleFavorite}
+              >
+                {isFavorited ? '⭐ 已收藏' : '☆ 收藏方案'}
+              </button>
+              <button className="btn-primary btn-regenerate" onClick={onRegenerate}>
+                🔄 重新生成
+              </button>
+            </>
+          ) : (
+            <button className="btn-fav-delete-large" onClick={onDeleteFavorite}>
+              🗑️ 取消收藏
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="result-header">
@@ -563,6 +766,100 @@ function ResultPage({
               return <p key={i} className="doc-p">{line}</p>
             })}
           </section>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Favorites Page ──
+function FavoritesPage({
+  favorites,
+  user,
+  onViewDetail,
+  onDelete,
+  onBack,
+  onLoginClick,
+}: {
+  favorites: Favorite[]
+  user: User | null
+  onViewDetail: (fav: Favorite) => void
+  onDelete: (id: string) => void
+  onBack: () => void
+  onLoginClick: () => void
+}) {
+  // Not logged in
+  if (!user) {
+    return (
+      <div className="page favorites-page">
+        <div className="favorites-empty">
+          <span className="favorites-empty-icon">🔒</span>
+          <h2 className="favorites-empty-title">请先登录后查看收藏</h2>
+          <p className="favorites-empty-desc">登录后即可收藏和查看你的策划方案</p>
+          <button className="btn-primary" onClick={onLoginClick}>
+            登录
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Logged in but empty
+  if (favorites.length === 0) {
+    return (
+      <div className="page favorites-page">
+        <button className="btn-back" onClick={onBack}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          返回
+        </button>
+        <div className="favorites-empty">
+          <span className="favorites-empty-icon">⭐</span>
+          <h2 className="favorites-empty-title">还没有收藏过方案</h2>
+          <p className="favorites-empty-desc">生成策划方案后，点击收藏按钮即可保存到这里</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page favorites-page">
+      <div className="favorites-header-row">
+        <button className="btn-back" onClick={onBack}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          返回
+        </button>
+        <div className="favorites-title-area">
+          <h2 className="favorites-title">⭐ 我的收藏</h2>
+          <p className="favorites-count">共 {favorites.length} 个方案</p>
+        </div>
+      </div>
+
+      <div className="favorites-grid">
+        {favorites.map((fav) => (
+          <article key={fav.id} className="favorite-card">
+            <h3 className="fav-card-title">{fav.title}</h3>
+            <div className="fav-card-tags">
+              <span className="fav-tag">🎮 {TYPE_NAMES[fav.selections.gameType] ?? fav.selections.gameType}</span>
+              <span className="fav-tag">⚔️ {FOCUS_NAMES[fav.selections.gameplayFocus] ?? fav.selections.gameplayFocus}</span>
+              <span className="fav-tag">🎨 {ART_NAMES[fav.selections.artStyle] ?? fav.selections.artStyle}</span>
+            </div>
+            <p className="fav-card-snippet">{getSnippet(fav.plan.worldbuilding)}</p>
+            <div className="fav-card-footer">
+              <span className="fav-card-time">🕐 {formatTime(fav.timestamp)}</span>
+              <div className="fav-card-actions">
+                <button className="btn-fav-view" onClick={() => onViewDetail(fav)}>
+                  查看详情
+                </button>
+                <button className="btn-fav-delete" onClick={() => onDelete(fav.id)}>
+                  删除
+                </button>
+              </div>
+            </div>
+          </article>
         ))}
       </div>
     </div>
@@ -606,6 +903,54 @@ export default function App() {
   })
   const [plan, setPlan] = useState<GamePlan | null>(null)
 
+  // Auth & favorites state
+  const [user, setUser] = useState<User | null>(null)
+  const [showLogin, setShowLogin] = useState(false)
+  const [favorites, setFavorites] = useState<Favorite[]>([])
+  const [viewingFavorite, setViewingFavorite] = useState<Favorite | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const [backPage, setBackPage] = useState<'select' | 'favorites'>('select')
+
+  // ── Load user from localStorage on mount ──
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ai_planner_user')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && parsed.nickname && parsed.email) {
+          setUser(parsed)
+        }
+      }
+    } catch { /* ignore corrupt data */ }
+  }, [])
+
+  // ── Load favorites when user changes ──
+  useEffect(() => {
+    if (user) {
+      try {
+        const saved = localStorage.getItem(`ai_planner_favs_${user.email}`)
+        if (saved) {
+          setFavorites(JSON.parse(saved))
+        } else {
+          setFavorites([])
+        }
+      } catch {
+        setFavorites([])
+      }
+    } else {
+      setFavorites([])
+    }
+  }, [user])
+
+  // ── Auto-dismiss toast ──
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
+
+  // ── Handlers ──
   const handleGenerate = useCallback(() => {
     setPage('generating')
   }, [])
@@ -613,6 +958,8 @@ export default function App() {
   const handleComplete = useCallback(() => {
     const newPlan = generatePlan(selections)
     setPlan(newPlan)
+    setViewingFavorite(null)
+    setBackPage('select')
     setPage('result')
   }, [selections])
 
@@ -622,8 +969,102 @@ export default function App() {
 
   const handleResetSelections = useCallback(() => {
     setSelections({ gameType: '', gameplayFocus: '', artStyle: '', playerGoal: '' })
+    setViewingFavorite(null)
+    setBackPage('select')
     setPage('select')
   }, [])
+
+  const handleLogin = useCallback((nickname: string, email: string) => {
+    const u: User = { nickname, email }
+    localStorage.setItem('ai_planner_user', JSON.stringify(u))
+    setUser(u)
+    setShowLogin(false)
+  }, [])
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('ai_planner_user')
+    setUser(null)
+    setFavorites([])
+    setPage('home')
+  }, [])
+
+  const handleToggleFavorite = useCallback(() => {
+    if (!user) {
+      setToast('请先登录后再收藏方案')
+      return
+    }
+    if (!plan) return
+
+    const isFav = favorites.some(f => f.plan.worldbuilding === plan.worldbuilding)
+
+    if (isFav) {
+      const newFavs = favorites.filter(f => f.plan.worldbuilding !== plan.worldbuilding)
+      setFavorites(newFavs)
+      localStorage.setItem(`ai_planner_favs_${user.email}`, JSON.stringify(newFavs))
+      setToast('已取消收藏')
+    } else {
+      const fav: Favorite = {
+        id: generateFavoriteId(),
+        title: `${TYPE_NAMES[selections.gameType] ?? selections.gameType} · ${FOCUS_NAMES[selections.gameplayFocus] ?? selections.gameplayFocus} · ${ART_NAMES[selections.artStyle] ?? selections.artStyle} 策划方案`,
+        plan: plan,
+        selections: { ...selections },
+        timestamp: Date.now(),
+      }
+      const newFavs = [fav, ...favorites]
+      setFavorites(newFavs)
+      localStorage.setItem(`ai_planner_favs_${user.email}`, JSON.stringify(newFavs))
+      setToast('已收藏方案 ⭐')
+    }
+  }, [user, plan, favorites, selections])
+
+  const handleViewFavorite = useCallback((fav: Favorite) => {
+    setViewingFavorite(fav)
+    setPlan(fav.plan)
+    setSelections(fav.selections)
+    setBackPage('favorites')
+    setPage('result')
+  }, [])
+
+  const handleDeleteFavorite = useCallback((id: string) => {
+    const newFavs = favorites.filter(f => f.id !== id)
+    setFavorites(newFavs)
+    if (user) {
+      localStorage.setItem(`ai_planner_favs_${user.email}`, JSON.stringify(newFavs))
+    }
+    // If we're viewing this favorite, go back to favorites page
+    if (viewingFavorite && viewingFavorite.id === id) {
+      setViewingFavorite(null)
+      setPage('favorites')
+    }
+    setToast('已删除收藏')
+  }, [favorites, user, viewingFavorite])
+
+  const handleGoToFavorites = useCallback(() => {
+    setPage('favorites')
+  }, [])
+
+  const handleResultBack = useCallback(() => {
+    if (backPage === 'favorites') {
+      setPage('favorites')
+      setViewingFavorite(null)
+    } else {
+      handleResetSelections()
+    }
+  }, [backPage, handleResetSelections])
+
+  const handleNavigate = useCallback((target: Page) => {
+    if (target === 'favorites') {
+      setPage('favorites')
+    } else {
+      setPage(target)
+    }
+    setViewingFavorite(null)
+  }, [])
+
+  // ── Derived state ──
+  const isCurrentPlanFavorited = user
+    ? favorites.some(f => plan && f.plan.worldbuilding === plan.worldbuilding)
+    : false
 
   return (
     <div className="app">
@@ -632,6 +1073,15 @@ export default function App() {
         <div className="bg-orb bg-orb-2" />
         <div className="bg-orb bg-orb-3" />
       </div>
+
+      <Navbar
+        user={user}
+        currentPage={page}
+        onNavigate={handleNavigate}
+        onLoginClick={() => setShowLogin(true)}
+        onLogout={handleLogout}
+      />
+
       {page === 'home' && <HomePage onStart={() => setPage('select')} />}
       {page === 'select' && (
         <SelectPage
@@ -647,9 +1097,33 @@ export default function App() {
           plan={plan}
           selections={selections}
           onRegenerate={handleRegenerate}
-          onBack={handleResetSelections}
+          onBack={handleResultBack}
+          isFavorited={isCurrentPlanFavorited}
+          onToggleFavorite={handleToggleFavorite}
+          sourcePage={backPage}
+          onDeleteFavorite={viewingFavorite ? () => handleDeleteFavorite(viewingFavorite.id) : undefined}
         />
       )}
+      {page === 'favorites' && (
+        <FavoritesPage
+          favorites={favorites}
+          user={user}
+          onViewDetail={handleViewFavorite}
+          onDelete={handleDeleteFavorite}
+          onBack={() => setPage('home')}
+          onLoginClick={() => setShowLogin(true)}
+        />
+      )}
+
+      {showLogin && (
+        <LoginModal
+          onLogin={handleLogin}
+          onClose={() => setShowLogin(false)}
+        />
+      )}
+
+      {toast && <Toast message={toast} />}
+
       <Footer />
     </div>
   )
