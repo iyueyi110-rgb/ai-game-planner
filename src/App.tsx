@@ -918,7 +918,6 @@ function Footer() {
       <div className="footer-content">
         <div className="footer-brand">
           <span className="footer-logo">AI 叙事游戏策划助手</span>
-          <span className="footer-badge">作品集项目</span>
         </div>
         <p className="footer-desc">
           面向游戏策划流程的 AI 辅助创意工具 —— 通过选择游戏类型、玩法重点、美术风格与玩家目标，
