@@ -791,7 +791,7 @@ function ResultPage({
       <div className="result-document" ref={resultRef}>
         {sections.slice(0, visibleSections).map(([key, content]) => (
           <section key={key} className={`doc-section fade-in`}>
-            {content.split('\n').map((line, i) => {
+            {content.split('\n').map((line: string, i: number) => {
               if (line.startsWith('## ')) {
                 return <h2 key={i}>{line.replace('## ', '')}</h2>
               }
@@ -1090,10 +1090,6 @@ export default function App() {
     }
     setToast('已删除收藏')
   }, [favorites, user, viewingFavorite])
-
-  const handleGoToFavorites = useCallback(() => {
-    setPage('favorites')
-  }, [])
 
   const handleResultBack = useCallback(() => {
     if (backPage === 'favorites') {
